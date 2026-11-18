@@ -1,0 +1,10 @@
+{
+  "description": "Organize and manage class schedules with AI-powered import, attendance tracking, and role-specific features for students and instructors.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
