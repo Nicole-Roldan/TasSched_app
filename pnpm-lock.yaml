@@ -14,6 +14,9 @@ importers:
       '@capacitor/core':
         specifier: ^7.6.10
         version: 7.6.10
+      '@capacitor/ios':
+        specifier: ^7.6.10
+        version: 7.6.10(@capacitor/core@7.6.10)
       expo:
         specifier: ^58.0.25
         version: 58.0.26(@babel/core@7.29.13)(@expo/dom-webview@58.0.2)(react-dom@19.2.4(react@19.2.4))(react-native@0.88.1(@babel/core@7.29.13)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
@@ -427,6 +430,11 @@ packages:
 
   '@capacitor/core@7.6.10':
     resolution: {integrity: sha512-foYHd//t6E3RTELVG8wdkp5jVnmLcHKUurAa9BA8EUSNd2eY0SijCHpfO0bFwYBP5DrCeXwgSFYi3NJw413gtQ==}
+
+  '@capacitor/ios@7.6.10':
+    resolution: {integrity: sha512-iDXt6n6+tQq6fLMgdVNwT7dtgyqGSpGmPx1AGrUJq3YxOqpzqqtY4v4phqhys9PxPSrVyxnWGAL+SEsAHtZLkQ==}
+    peerDependencies:
+      '@capacitor/core': ^7.6.0
 
   '@emnapi/core@1.9.1':
     resolution: {integrity: sha512-mukuNALVsoix/w1BJwFzwXBN/dHeejQtuVzcDsfOEsdpCumXb/E9j8w11h5S54tT1xhifGfbbSm/ICrObRb3KA==}
@@ -3194,6 +3202,10 @@ snapshots:
   '@capacitor/core@7.6.10':
     dependencies:
       tslib: 2.8.1
+
+  '@capacitor/ios@7.6.10(@capacitor/core@7.6.10)':
+    dependencies:
+      '@capacitor/core': 7.6.10
 
   '@emnapi/core@1.9.1':
     dependencies:

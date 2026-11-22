@@ -12,6 +12,7 @@
   "dependencies": {
     "@capacitor/android": "^7.6.10",
     "@capacitor/core": "^7.6.10",
+    "@capacitor/ios": "^7.6.10",
     "expo": "^58.0.25",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
