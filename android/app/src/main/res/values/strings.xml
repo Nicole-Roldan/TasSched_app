@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TasSched</string>
+    <string name="title_activity_main">TasSched</string>
+    <string name="package_name">com.tassched.app</string>
+    <string name="custom_url_scheme">com.tassched.app</string>
+</resources>
