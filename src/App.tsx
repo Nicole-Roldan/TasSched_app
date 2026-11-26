@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Mascot from "./components/Mascot";
 import { UserAvatar, AvatarPickerModal } from "./components/AvatarPicker";
+import FloatingAIChat from "./components/FloatingAIChat";
 
 type Role = "student" | "instructor";
 type Screen =
@@ -130,6 +131,7 @@ const paths: Record<string, React.ReactNode> = {
   sparkles: <path d="m12 3 1.9 4.9L19 10l-4.1 2.1L13 17l-1.9-4.9L7 10l4.1-2.1L12 3Z" />,
   info: <><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></>,
   chevronDown: <path d="m6 9 6 6 6-6" />,
+  chevronRight: <path d="m9 18 6-6-6-6" />,
 };
 
 function Icon({ name, size = 22 }: { name: string; size?: number }) {
@@ -284,9 +286,6 @@ function Welcome({ next, skip }: { next: () => void; skip: () => void }) {
           pose="peeking-folder"
           size={230}
           className="welcome-mascot-size"
-          speech="Hey there! Welcome to TaSched!"
-          subtitle="Your academic journey starts here."
-          badge="OFFICIAL MASCOT"
         />
       </div>
 
@@ -1065,11 +1064,12 @@ function HomeTab({
   userName = "",
   term,
   classes,
+  tasks,
+  setTasks,
   openSheet,
   openNotifications,
   openSchedule,
-  onEditClass,
-  onDeleteClass,
+  openTasks,
   restart,
   avatar,
   openAvatarModal,
@@ -1078,31 +1078,21 @@ function HomeTab({
   userName?: string;
   term: AcademicTerm;
   classes: ClassItem[];
+  tasks: TaskItem[];
+  setTasks: React.Dispatch<React.SetStateAction<TaskItem[]>>;
   openSheet: () => void;
   openNotifications: () => void;
   openSchedule: () => void;
+  openTasks: () => void;
   onEditClass?: (item: ClassItem) => void;
   onDeleteClass?: (id: string) => void;
   restart?: () => void;
   avatar?: string;
   openAvatarModal?: () => void;
 }) {
-  const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null);
+  const [taskSheet, setTaskSheet] = useState(false);
   const dayMap: Record<string, number> = { Su: 0, Mo: 1, Tu: 2, We: 3, Th: 4, Fr: 5, Sa: 6 };
   const today = new Date();
-  const todayCode = Object.keys(dayMap).find((day) => dayMap[day] === today.getDay()) || "Mo";
-  const todayClasses = classes.filter((item) => item.days.includes(todayCode)).sort((a, b) => a.start.localeCompare(b.start));
-
-  const todayHasConflicts = useMemo(() => {
-    for (let i = 0; i < todayClasses.length; i++) {
-      for (let j = i + 1; j < todayClasses.length; j++) {
-        if (checkTimeOverlap(todayClasses[i].start, todayClasses[i].end, todayClasses[j].start, todayClasses[j].end)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }, [todayClasses]);
 
   const nextClass = classes.flatMap((item) => item.days.map((day) => {
     const occurrence = new Date(today);
@@ -1113,6 +1103,12 @@ function HomeTab({
     if (occurrence <= today) occurrence.setDate(occurrence.getDate() + 7);
     return { item, day, occurrence };
   })).sort((a, b) => a.occurrence.getTime() - b.occurrence.getTime())[0];
+
+  const upcomingTasks = useMemo(
+    () => tasks.filter((task) => !task.done).sort((a, b) => a.dueDate.localeCompare(b.dueDate)),
+    [tasks],
+  );
+  const subjectName = (id: string) => classes.find((item) => item.id === id)?.name || "General Task";
 
   return (
     <>
@@ -1135,63 +1131,76 @@ function HomeTab({
       <main className="app-content home-content">
         <section className="hello"><p>{term.semester} • {term.academicYear}</p><h1>Hi, {userName?.trim() || (role === "student" ? "Student" : "Instructor")}.</h1><span>You have {classes.length} {role === "student" ? "classes" : "teaching blocks"} in this term</span></section>
         {nextClass ? <article className="next-class">
-          <div className="next-top"><span><i />NEXT CLASS</span><strong>Coming up</strong></div>
+          <div className="next-class-decor" aria-hidden="true">
+            <svg viewBox="0 0 160 160" fill="none">
+              <circle cx="120" cy="40" r="64" stroke="currentColor" strokeWidth="1" strokeDasharray="4 6" opacity="0.28" />
+              <circle cx="120" cy="40" r="42" stroke="currentColor" strokeWidth="1.2" opacity="0.2" />
+              <circle cx="120" cy="40" r="20" fill="currentColor" opacity="0.08" />
+              <rect x="86" y="74" width="52" height="52" rx="14" stroke="currentColor" strokeWidth="1.2" opacity="0.16" />
+              <path d="M98 92h28M98 102h20M98 112h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.22" />
+            </svg>
+          </div>
+          <div className="next-top">
+            <span className="next-live-pill"><i />NEXT CLASS</span>
+            <strong className="next-status-pill">Coming up</strong>
+          </div>
           <h2>{nextClass.item.name}{role === "instructor" && nextClass.item.section ? ` • ${nextClass.item.section}` : ""}</h2>
           <p>{role === "student" ? nextClass.item.instructor : nextClass.item.room || "Room not set"} • {nextClass.day} • {formatTime(nextClass.item.start)} – {formatTime(nextClass.item.end)}</p>
-          <div className="next-meta"><span><Icon name="clock" size={18} /> {nextClass.item.room || nextClass.item.days.join(" & ")}</span><button onClick={openSchedule}>{role === "student" ? "View class" : "Open class"} →</button></div>
-        </article> : <EmptySchedule role={role} openSheet={openSheet} restart={restart} />}
-        {classes.length > 0 && <>
-          <div className="section-title">
-            <div>
-              <h2>Today's {role === "student" ? "classes" : "teaching load"}</h2>
-              <p>{todayClasses.length} scheduled</p>
-            </div>
-            <button onClick={openSchedule}>See schedule</button>
+          <div className="next-meta">
+            <span className="next-room-chip"><Icon name="clock" size={15} /> {nextClass.item.room || nextClass.item.days.join(" & ")}</span>
+            <button onClick={openSchedule}>{role === "student" ? "View class" : "Open class"} →</button>
           </div>
-          {todayHasConflicts && (
-            <div className="schedule-conflict-banner">
-              <Icon name="alert" size={18} />
-              <span>⚠️ Notice: Overlapping classes detected in today's schedule!</span>
-            </div>
-          )}
-          {todayClasses.length ? (
-            <div className="timeline">
-              <span className="timeline-line" />
-              {todayClasses.map((item) => {
-                const classConflicts = findClassConflicts(item, todayClasses.filter((c) => c.id !== item.id));
-                return (
-                  <ClassCard
-                    item={item}
-                    key={item.id}
-                    conflicts={classConflicts}
-                    onClick={() => setSelectedClass(item)}
-                    onEdit={onEditClass ? () => onEditClass(item) : undefined}
-                    onDelete={onDeleteClass ? () => onDeleteClass(item.id) : undefined}
-                  />
-                );
-              })}
-            </div>
-          ) : (
-            <div className="empty-list"><p>No classes scheduled today. Check your weekly schedule for upcoming classes.</p></div>
-          )}
-        </>}
-        <button className="quick-add" onClick={openSheet}><Icon name="plus" /> {role === "student" ? "Add a class" : "Add teaching block"}</button>
+        </article> : <EmptySchedule role={role} openSheet={openSheet} restart={restart} />}
+
+        <div className="section-title">
+          <div>
+            <h2>Upcoming tasks</h2>
+            <p>{upcomingTasks.length} pending</p>
+          </div>
+          <button onClick={openTasks}>See tasks</button>
+        </div>
+
+        {upcomingTasks.length ? (
+          <div className="home-tasks-list">
+            {upcomingTasks.map((task) => (
+              <article className={`task-card ${task.done ? "is-done" : ""}`} key={task.id}>
+                <button
+                  className="task-check"
+                  aria-label={task.done ? `Mark ${task.title} as not done` : `Mark ${task.title} as done`}
+                  onClick={() => setTasks((current) => current.map((item) => item.id === task.id ? { ...item, done: !item.done } : item))}
+                >
+                  <Icon name={task.done ? "check" : "clock"} size={18} />
+                </button>
+                <div>
+                  <h3>{task.title}</h3>
+                  <p>{subjectName(task.subjectId)} • Due {formatDate(task.dueDate)}</p>
+                </div>
+                <button
+                  className="task-delete"
+                  aria-label={`Delete ${task.title}`}
+                  onClick={() => setTasks((current) => current.filter((item) => item.id !== task.id))}
+                >
+                  <Icon name="trash" size={17} />
+                </button>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-list">
+            <p>{tasks.length > 0 ? "All tasks completed! Great job staying on track." : "No upcoming tasks yet. Add one to keep track of due dates."}</p>
+          </div>
+        )}
+
+        <button className="quick-add" onClick={() => setTaskSheet(true)}><Icon name="plus" /> Add a task</button>
       </main>
 
-      {selectedClass && (
-        <ClassDetailModal
-          item={selectedClass}
-          conflicts={findClassConflicts(selectedClass, classes.filter((c) => c.id !== selectedClass.id))}
-          close={() => setSelectedClass(null)}
-          onEdit={() => {
-            const cls = selectedClass;
-            setSelectedClass(null);
-            onEditClass?.(cls);
-          }}
-          onDelete={() => {
-            const id = selectedClass.id;
-            setSelectedClass(null);
-            onDeleteClass?.(id);
+      {taskSheet && (
+        <NewTaskSheet
+          classes={classes}
+          close={() => setTaskSheet(false)}
+          save={(task) => {
+            setTasks((current) => [...current, task]);
+            setTaskSheet(false);
           }}
         />
       )}
@@ -1214,9 +1223,10 @@ function ScheduleTab({
   onEditClass?: (item: ClassItem) => void;
   onDeleteClass?: (id: string) => void;
 }) {
-  const weekdays = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-  const dayNames: Record<string, string> = { Mo: "Monday", Tu: "Tuesday", We: "Wednesday", Th: "Thursday", Fr: "Friday", Sa: "Saturday", Su: "Sunday" };
-  const todayCode = weekdays[(new Date().getDay() + 6) % 7];
+  const weekdays = ["Mo", "Tu", "We", "Th", "Fr"];
+  const dayNames: Record<string, string> = { Mo: "Monday", Tu: "Tuesday", We: "Wednesday", Th: "Thursday", Fr: "Friday" };
+  const dayOfWeek = new Date().getDay();
+  const todayCode = (dayOfWeek >= 1 && dayOfWeek <= 5) ? weekdays[dayOfWeek - 1] : "Mo";
   const [day, setDay] = useState(todayCode);
   const [view, setView] = useState<"day" | "week">("day");
   const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null);
@@ -1560,109 +1570,196 @@ function ProfileTab({
       </header>
       <main className="app-content profile-content">
         <div className="profile-card">
-          <UserAvatar
-            avatar={avatar}
-            role={role}
-            userName={userName}
-            size={68}
-            showEditBadge
+          <div
+            className="profile-avatar-wrap"
             onClick={openAvatarModal}
-          />
-          <div>
-            <h2>{userName.trim() || (role === "student" ? "Student profile" : "Instructor profile")}</h2>
-            <p>{role === "student" ? "Student" : "Instructor"} • {term.academicYear}</p>
-            <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "4px", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                className="text-button"
-                style={{
-                  minHeight: "auto",
-                  padding: "2px 0 0",
-                  color: "var(--emerald)",
-                  fontSize: "0.8125rem",
-                  fontWeight: 700,
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "3px",
-                }}
-                onClick={() => {
-                  setTempName(userName);
-                  setEditingName(true);
-                }}
-              >
-                <span>Edit nickname ✎</span>
-              </button>
-              <span style={{ color: "var(--gray)", fontSize: "0.75rem" }}>•</span>
-              <button
-                type="button"
-                className="text-button"
-                style={{
-                  minHeight: "auto",
-                  padding: "2px 0 0",
-                  color: "var(--emerald)",
-                  fontSize: "0.8125rem",
-                  fontWeight: 700,
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "3px",
-                }}
-                onClick={openAvatarModal}
-              >
-                <span>Avatar ✎</span>
-              </button>
+            role="button"
+            tabIndex={0}
+            title="Change Avatar"
+          >
+            <UserAvatar
+              avatar={avatar}
+              role={role}
+              userName={userName}
+              size={64}
+              showEditBadge
+            />
+          </div>
+          <div className="profile-card-info">
+            <h2 className="profile-card-name">
+              {userName.trim() || (role === "student" ? "Student profile" : "Instructor profile")}
+            </h2>
+            <div className="profile-meta-row">
+              <span className={`profile-badge-pill ${role === "student" ? "pill-student" : "pill-instructor"}`}>
+                {role === "student" ? "Student" : "Instructor"}
+              </span>
+              {term.academicYear && (
+                <span className="profile-ay-text">A.Y. {term.academicYear}</span>
+              )}
             </div>
           </div>
-          <button onClick={() => { setTempName(userName); setEditingName(true); }} aria-label="Edit nickname">
-            <Icon name="edit" size={18} />
+          <button
+            type="button"
+            className="profile-edit-action-btn"
+            onClick={() => {
+              setTempName(userName);
+              setEditingName(true);
+            }}
+            aria-label="Edit Nickname"
+            title="Edit Nickname"
+          >
+            <Icon name="edit" size={17} />
           </button>
         </div>
+
         <h3 className="settings-label">ACADEMIC & ACCOUNT</h3>
         <div className="settings-card">
-          <button onClick={() => { setTempName(userName); setEditingName(true); }}>
-            <span><Icon name="user" />Nickname / Name</span>
-            <b>{userName || "Set nickname"} ›</b>
+          <button
+            type="button"
+            className="setting-item"
+            onClick={() => {
+              setTempName(userName);
+              setEditingName(true);
+            }}
+          >
+            <div className="setting-item-left">
+              <div className="setting-icon-box icon-box-emerald">
+                <Icon name="user" size={18} />
+              </div>
+              <div className="setting-text-wrap">
+                <span className="setting-title">Nickname / Name</span>
+              </div>
+            </div>
+            <div className="setting-item-right">
+              <span className="setting-value">{userName || "Set nickname"}</span>
+              <Icon name="chevronRight" size={16} />
+            </div>
           </button>
-          <button onClick={switchRole}>
-            <span><Icon name="users" />Switch role</span>
-            <b>{role === "student" ? "Student" : "Instructor"} ›</b>
+
+          <button
+            type="button"
+            className="setting-item"
+            onClick={switchRole}
+          >
+            <div className="setting-item-left">
+              <div className="setting-icon-box icon-box-blue">
+                <Icon name="users" size={18} />
+              </div>
+              <div className="setting-text-wrap">
+                <span className="setting-title">Switch role</span>
+              </div>
+            </div>
+            <div className="setting-item-right">
+              <span className="setting-value">{role === "student" ? "Student" : "Instructor"}</span>
+              <Icon name="chevronRight" size={16} />
+            </div>
           </button>
-          <button onClick={() => setEditingTerm(true)}>
-            <span><Icon name="calendar" />Academic term</span>
-            <b>{semesterShort(term.semester)} ›</b>
+
+          <button
+            type="button"
+            className="setting-item setting-item-term"
+            onClick={() => setEditingTerm(true)}
+          >
+            <div className="setting-item-left">
+              <div className="setting-icon-box icon-box-amber">
+                <Icon name="calendar" size={18} />
+              </div>
+              <div className="setting-text-wrap">
+                <span className="setting-title">Academic term</span>
+                {term.startDate && term.endDate && (
+                  <span className="setting-subtext">
+                    {formatDate(term.startDate)} – {formatDate(term.endDate)}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="setting-item-right">
+              <span className="setting-value">{semesterShort(term.semester)}</span>
+              <Icon name="chevronRight" size={16} />
+            </div>
           </button>
-          <div className="term-detail">
-            <span>{formatDate(term.startDate)}</span>
-            <span>{formatDate(term.endDate)}</span>
-          </div>
         </div>
+
         <h3 className="settings-label">PREFERENCES</h3>
         <div className="settings-card">
-          <button onClick={openAvatarModal}>
-            <span><Icon name="user" />Change Avatar</span>
-            <b>Edit ›</b>
+          <button
+            type="button"
+            className="setting-item"
+            onClick={openAvatarModal}
+          >
+            <div className="setting-item-left">
+              <div className="setting-icon-box icon-box-purple">
+                <Icon name="sparkles" size={18} />
+              </div>
+              <div className="setting-text-wrap">
+                <span className="setting-title">Change Avatar</span>
+              </div>
+            </div>
+            <div className="setting-item-right">
+              <span className="setting-value">Edit</span>
+              <Icon name="chevronRight" size={16} />
+            </div>
           </button>
-          <button onClick={openNotifications}>
-            <span><Icon name="bell" />Notifications</span>
-            <b>Open ›</b>
+
+          <button
+            type="button"
+            className="setting-item"
+            onClick={openNotifications}
+          >
+            <div className="setting-item-left">
+              <div className="setting-icon-box icon-box-rose">
+                <Icon name="bell" size={18} />
+              </div>
+              <div className="setting-text-wrap">
+                <span className="setting-title">Notifications</span>
+              </div>
+            </div>
+            <div className="setting-item-right">
+              <span className="setting-value">Open</span>
+              <Icon name="chevronRight" size={16} />
+            </div>
           </button>
+
           {openAbout && (
-            <button onClick={openAbout}>
-              <span><Icon name="info" />About & Terms</span>
-              <b>View ›</b>
+            <button
+              type="button"
+              className="setting-item"
+              onClick={openAbout}
+            >
+              <div className="setting-item-left">
+                <div className="setting-icon-box icon-box-cyan">
+                  <Icon name="info" size={18} />
+                </div>
+                <div className="setting-text-wrap">
+                  <span className="setting-title">About & Terms</span>
+                </div>
+              </div>
+              <div className="setting-item-right">
+                <span className="setting-value">View</span>
+                <Icon name="chevronRight" size={16} />
+              </div>
             </button>
           )}
-          <div className="profile-toggle-row">
-            <span><Icon name="moon" />Dark mode</span>
-            <Toggle checked={dark} onChange={toggleDark} />
+
+          <div className="setting-item setting-toggle-item">
+            <div className="setting-item-left">
+              <div className="setting-icon-box icon-box-slate">
+                <Icon name="moon" size={18} />
+              </div>
+              <div className="setting-text-wrap">
+                <span className="setting-title">Dark mode</span>
+              </div>
+            </div>
+            <div className="setting-item-right">
+              <Toggle checked={dark} onChange={toggleDark} />
+            </div>
           </div>
         </div>
-        <button className="logout" onClick={restart}>Log out</button>
+
+        <button className="logout-btn" onClick={restart}>
+          <Icon name="trash" size={16} />
+          <span>Log out</span>
+        </button>
       </main>
       {editingTerm && <TermEditSheet current={term} save={(nextTerm) => { setTerm(nextTerm); setEditingTerm(false); }} close={() => setEditingTerm(false)} />}
       {editingName && (
@@ -1907,7 +2004,7 @@ function NewClassSheet({
             </div>
 
             <div className="multi-days">
-              {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d) => {
+              {["Mo", "Tu", "We", "Th", "Fr"].map((d) => {
                 const isSelected = days.includes(d);
                 const dayHasConflict =
                   form.start &&
@@ -1934,36 +2031,6 @@ function NewClassSheet({
                   </div>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Time Slot Preset Dropdown with dynamic conflict tags */}
-          <div className="input-row">
-            <label htmlFor="slot-picker">Time Slot Preset (Dropdown)</label>
-            <div className={`select-wrapper ${hasConflict ? "select-has-conflict" : ""}`}>
-              <select
-                id="slot-picker"
-                className={`field-select ${hasConflict ? "has-conflict" : ""}`}
-                value={selectedSlot}
-                onChange={(e) => handleSlotChange(e.target.value)}
-              >
-                <option value="">-- Choose a Schedule Time Slot --</option>
-                {TIME_SLOT_PRESETS.map((slot) => {
-                  const slotConflicts = findClassConflicts(
-                    { id: editingClass?.id, days, start: slot.start, end: slot.end },
-                    existingClasses
-                  );
-                  const isConflicting = slotConflicts.length > 0;
-                  return (
-                    <option key={slot.label} value={`${slot.start}-${slot.end}`}>
-                      {isConflicting
-                        ? `⚠️ ${slot.label} [CONFLICT: ${slotConflicts[0].name}]`
-                        : `✓ ${slot.label} (Available)`}
-                    </option>
-                  );
-                })}
-                <option value="custom">✏️ Custom Time Range...</option>
-              </select>
             </div>
           </div>
 
@@ -2747,12 +2814,15 @@ function AppShell({
           userName={userName}
           term={term}
           classes={classes}
+          tasks={tasks}
+          setTasks={setTasks}
           openSheet={() => {
             setEditingClass(null);
             setSheet(true);
           }}
           openNotifications={() => setPage("notifications")}
           openSchedule={() => setTab("schedule")}
+          openTasks={() => setTab("tasks")}
           onEditClass={(item) => {
             setEditingClass(item);
             setSheet(true);
@@ -2842,6 +2912,11 @@ function AppShell({
         />
       )}
       {activeReminder && <NotificationBanner reminder={activeReminder} view={() => setPage("notifications")} snooze={() => { const snoozed = { ...activeReminder, id: `${Date.now()}`, time: "Snoozed for 5 min", unread: true, upcoming: true }; setReminders?.((current) => [snoozed, ...(Array.isArray(current) ? current : [])]); setActiveReminder(null); window.setTimeout(() => fireReminder({ ...snoozed, time: "Just now", upcoming: false }), 300000); }} dismiss={() => setActiveReminder(null)} />}
+      <FloatingAIChat
+        context={{ role, userName, term, classes, tasks }}
+        darkMode={effectiveDark}
+        onAddTask={(task) => setTasks((current) => [...current, task])}
+      />
     </div>
   );
 }
