@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Mascot from "./components/Mascot";
 import { UserAvatar, AvatarPickerModal } from "./components/AvatarPicker";
 import FloatingAIChat from "./components/FloatingAIChat";
+import splashCampus from "./assets/splash-campus.jpg";
+import splashPlanning from "./assets/splash-planning.jpg";
+import splashLibrary from "./assets/splash-library.jpg";
+import appIcon from "./assets/tasched-icon.jpg";
 
 type Role = "student" | "instructor";
 type Screen =
@@ -40,6 +44,7 @@ type TaskItem = {
   title: string;
   subjectId: string;
   dueDate: string;
+  dueTime?: string;
   done: boolean;
 };
 type ThemeMode = "light" | "dark" | "system";
@@ -81,8 +86,8 @@ type SettingsState = {
 
 const defaultSettings: SettingsState = {
   themeMode: "light",
-  accent: "#4ADE9A",
-  accentName: "Mint Green",
+  accent: "#3B5BDB",
+  accentName: "Sapphire Blue",
   notificationsEnabled: false,
   permissionAsked: false,
   classReminders: true,
@@ -132,6 +137,10 @@ const paths: Record<string, React.ReactNode> = {
   info: <><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></>,
   chevronDown: <path d="m6 9 6 6 6-6" />,
   chevronRight: <path d="m9 18 6-6-6-6" />,
+  volume: <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></>,
+  palette: <><circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /><circle cx="17.5" cy="10.5" r=".5" fill="currentColor" /><circle cx="8.5" cy="7.5" r=".5" fill="currentColor" /><circle cx="6.5" cy="12.5" r=".5" fill="currentColor" /><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" /></>,
+  shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />,
+  help: <><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></>,
 };
 
 function Icon({ name, size = 22 }: { name: string; size?: number }) {
@@ -142,8 +151,17 @@ function Icon({ name, size = 22 }: { name: string; size?: number }) {
   );
 }
 
-function Brand({ dark = false }: { dark?: boolean }) {
-  return <div className={`brand ${dark ? "brand-dark" : ""}`}><span>Ta</span><strong>Sched</strong></div>;
+function Brand({ dark = false, showMark = false }: { dark?: boolean; showMark?: boolean }) {
+  return (
+    <div className={`brand ${dark ? "brand-dark" : ""}`}>
+      {showMark && (
+        <span className="brand-mark" aria-hidden="true">
+          <img src={appIcon} alt="" className="brand-mark-img" />
+        </span>
+      )}
+      <span>Ta</span><strong>Sched</strong>
+    </div>
+  );
 }
 
 function PrimaryButton({ children, onClick, disabled = false }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean }) {
@@ -275,31 +293,58 @@ const playTone = (tone: string, volume: number) => {
   });
 };
 
+const SPLASH_BACKDROPS = [
+  { src: splashCampus, alt: "Sunlit university campus walkway" },
+  { src: splashPlanning, alt: "Minimalist planner and study desk" },
+  { src: splashLibrary, alt: "Warm modern academic library" },
+];
+
 function Welcome({ next, skip }: { next: () => void; skip: () => void }) {
+  const [bgIndex, setBgIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setBgIndex((current) => (current + 1) % SPLASH_BACKDROPS.length);
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
     <main className="screen welcome">
-      <div className="welcome-glow" />
-      
-      {/* Orange Mascot prominently displayed in the center, peeking from behind yellow folder */}
-      <div className="welcome-mascot-container">
-        <Mascot
-          pose="peeking-folder"
-          size={230}
-          className="welcome-mascot-size"
-        />
+      {/* Cycling, softly blurred background photos */}
+      <div className="welcome-backdrop" aria-hidden="true">
+        {SPLASH_BACKDROPS.map((photo, index) => (
+          <img
+            key={photo.alt}
+            src={photo.src}
+            alt=""
+            className={`welcome-backdrop-img ${index === bgIndex ? "is-active" : ""}`}
+          />
+        ))}
+        <div className="welcome-tint-overlay" />
       </div>
 
-      <section className="welcome-copy">
-        <div className="welcome-tagline-pill">
-          <Icon name="check" size={14} /> PLAN LESS • LEARN MORE
+      <div className="welcome-glow" />
+      <div className="welcome-glow-secondary" />
+
+      <div className="welcome-center-stack">
+        <div className="welcome-emblem-card">
+          <img src={appIcon} alt="TaSched App Icon" className="welcome-app-icon" />
         </div>
-        <h1>Hey there! Welcome to TaSched!</h1>
-        <p>Your academic journey starts here.</p>
-      </section>
+
+        <div className="welcome-wordmark">
+          <span>TA</span><strong>SCHED</strong>
+        </div>
+
+        <p className="welcome-tagline">
+          Your calm academic companion.<br />
+          Organize classes, deadlines, and focus every step of the term.
+        </p>
+      </div>
 
       <div className="bottom-actions">
         <PrimaryButton onClick={next}>Get Started</PrimaryButton>
-        <button className="welcome-skip-btn" onClick={skip}>Skip</button>
+        <button className="welcome-skip-btn" onClick={skip}>Skip setup</button>
       </div>
     </main>
   );
@@ -872,6 +917,10 @@ function ClassCard({
       tabIndex={onClick ? 0 : undefined}
       style={{ cursor: onClick ? "pointer" : "default" }}
     >
+      <div className="class-glossy-bg" aria-hidden="true">
+        <span className="c-orb c-orb-1" />
+        <span className="c-orb c-orb-2" />
+      </div>
       <div className="time-column">
         <strong>{formatTime(item.start).split(" ")[0]}</strong>
         <small>{formatTime(item.start).split(" ")[1]}</small>
@@ -1068,6 +1117,7 @@ function HomeTab({
   setTasks,
   openSheet,
   openNotifications,
+  openSettings,
   openSchedule,
   openTasks,
   restart,
@@ -1082,6 +1132,7 @@ function HomeTab({
   setTasks: React.Dispatch<React.SetStateAction<TaskItem[]>>;
   openSheet: () => void;
   openNotifications: () => void;
+  openSettings?: () => void;
   openSchedule: () => void;
   openTasks: () => void;
   onEditClass?: (item: ClassItem) => void;
@@ -1091,46 +1142,135 @@ function HomeTab({
   openAvatarModal?: () => void;
 }) {
   const [taskSheet, setTaskSheet] = useState(false);
+  const [taskFilter, setTaskFilter] = useState<"all" | "pending" | "done">("all");
   const dayMap: Record<string, number> = { Su: 0, Mo: 1, Tu: 2, We: 3, Th: 4, Fr: 5, Sa: 6 };
   const today = new Date();
+  const todayCode = Object.keys(dayMap).find((day) => dayMap[day] === today.getDay()) || "Mo";
+  const todayClassesCount = classes.filter((item) => item.days.includes(todayCode)).length;
+
+  const hour = today.getHours();
+  const greetingPrefix = hour < 12 ? "Good morning," : hour < 18 ? "Good afternoon," : "Good evening,";
+  const displayName = userName?.trim() || (role === "student" ? "Scholar" : "Educator");
 
   const nextClass = classes.flatMap((item) => item.days.map((day) => {
     const occurrence = new Date(today);
     const daysAhead = (dayMap[day] - today.getDay() + 7) % 7;
-    const [hour, minute] = item.start.split(":").map(Number);
+    const [h, m] = item.start.split(":").map(Number);
     occurrence.setDate(today.getDate() + daysAhead);
-    occurrence.setHours(hour, minute, 0, 0);
+    occurrence.setHours(h, m, 0, 0);
     if (occurrence <= today) occurrence.setDate(occurrence.getDate() + 7);
     return { item, day, occurrence };
   })).sort((a, b) => a.occurrence.getTime() - b.occurrence.getTime())[0];
 
-  const upcomingTasks = useMemo(
-    () => tasks.filter((task) => !task.done).sort((a, b) => a.dueDate.localeCompare(b.dueDate)),
+  const pendingTasks = useMemo(
+    () =>
+      tasks
+        .filter((task) => !task.done)
+        .sort((a, b) => `${a.dueDate}T${a.dueTime || "23:59"}`.localeCompare(`${b.dueDate}T${b.dueTime || "23:59"}`)),
     [tasks],
   );
+  const completedTasks = useMemo(
+    () => tasks.filter((task) => task.done),
+    [tasks],
+  );
+  const filteredTasks = useMemo(() => {
+    const sorted = [...tasks].sort((a, b) =>
+      `${a.dueDate}T${a.dueTime || "23:59"}`.localeCompare(`${b.dueDate}T${b.dueTime || "23:59"}`),
+    );
+    if (taskFilter === "pending") return sorted.filter((t) => !t.done);
+    if (taskFilter === "done") return sorted.filter((t) => t.done);
+    return sorted;
+  }, [tasks, taskFilter]);
+
+  const completionPct = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
   const subjectName = (id: string) => classes.find((item) => item.id === id)?.name || "General Task";
 
   return (
     <>
       <header className="app-header">
-        <Brand />
-        <div>
-          <button className="notification" onClick={openNotifications} aria-label="Open notifications">
-            <Icon name="bell" size={20} />
+        <Brand showMark />
+        <div className="header-actions-group">
+          <button className="notification header-square-btn" onClick={openNotifications} aria-label="Open notifications">
+            <Icon name="bell" size={19} />
             <i />
           </button>
+          {openSettings && (
+            <button className="header-square-btn" onClick={openSettings} aria-label="Open settings">
+              <Icon name="settings" size={19} />
+            </button>
+          )}
           <UserAvatar
             avatar={avatar}
             role={role}
             userName={userName}
-            size={40}
+            size={38}
             onClick={openAvatarModal}
           />
         </div>
       </header>
       <main className="app-content home-content">
-        <section className="hello"><p>{term.semester} • {term.academicYear}</p><h1>Hi, {userName?.trim() || (role === "student" ? "Student" : "Instructor")}.</h1><span>You have {classes.length} {role === "student" ? "classes" : "teaching blocks"} in this term</span></section>
+        <section className="home-greeting-row">
+          <div className="home-greeting-copy">
+            <span className="home-term-chip">{term.semester || "Term"} • {term.academicYear || "2026-2027"}</span>
+            <h1>
+              <span className="greeting-light">{greetingPrefix}</span>
+              <strong className="greeting-name">{displayName}</strong>
+            </h1>
+          </div>
+          <div className="home-greeting-mascot">
+            <Mascot pose="waving" size={76} interactive />
+          </div>
+        </section>
+
+        {/* 2x2 Academic Snapshot KPI Grid */}
+        <section className="kpi-grid-2x2" aria-label="Daily overview">
+          <button type="button" className="kpi-card" onClick={openSchedule}>
+            <div className="kpi-card-top">
+              <span className="kpi-icon-tile tile-aqua"><Icon name="calendar" size={17} /></span>
+              <span className="kpi-title">Today</span>
+              <Icon name="chevronRight" size={15} />
+            </div>
+            <strong className="kpi-value val-aqua">{todayClassesCount}</strong>
+            <small className="kpi-sub">{todayClassesCount === 1 ? "class today" : "classes today"}</small>
+          </button>
+
+          <button type="button" className="kpi-card" onClick={openSchedule}>
+            <div className="kpi-card-top">
+              <span className="kpi-icon-tile tile-sapphire"><Icon name="clock" size={17} /></span>
+              <span className="kpi-title">Subjects</span>
+              <Icon name="chevronRight" size={15} />
+            </div>
+            <strong className="kpi-value val-sapphire">{classes.length}</strong>
+            <small className="kpi-sub">{classes.length === 1 ? "enrolled block" : "active blocks"}</small>
+          </button>
+
+          <button type="button" className="kpi-card" onClick={openTasks}>
+            <div className="kpi-card-top">
+              <span className="kpi-icon-tile tile-violet"><Icon name="tasks" size={17} /></span>
+              <span className="kpi-title">Pending</span>
+              <Icon name="chevronRight" size={15} />
+            </div>
+            <strong className="kpi-value val-violet">{pendingTasks.length}</strong>
+            <small className="kpi-sub">{pendingTasks.length === 1 ? "task remaining" : "tasks remaining"}</small>
+          </button>
+
+          <button type="button" className="kpi-card" onClick={openTasks}>
+            <div className="kpi-card-top">
+              <span className="kpi-icon-tile tile-sky"><Icon name="check" size={17} /></span>
+              <span className="kpi-title">Completed</span>
+              <Icon name="chevronRight" size={15} />
+            </div>
+            <strong className="kpi-value val-sky">{completedTasks.length}</strong>
+            <small className="kpi-sub">{completionPct}% done</small>
+          </button>
+        </section>
+
         {nextClass ? <article className="next-class">
+          <div className="glossy-moving-bg" aria-hidden="true">
+            <span className="orb orb-1" />
+            <span className="orb orb-2" />
+            <span className="orb orb-3" />
+          </div>
           <div className="next-class-decor" aria-hidden="true">
             <svg viewBox="0 0 160 160" fill="none">
               <circle cx="120" cy="40" r="64" stroke="currentColor" strokeWidth="1" strokeDasharray="4 6" opacity="0.28" />
@@ -1152,46 +1292,88 @@ function HomeTab({
           </div>
         </article> : <EmptySchedule role={role} openSheet={openSheet} restart={restart} />}
 
-        <div className="section-title">
-          <div>
-            <h2>Upcoming tasks</h2>
-            <p>{upcomingTasks.length} pending</p>
+        {/* Upcoming Tasks Activity Card */}
+        <section className="activity-card">
+          <div className="activity-head">
+            <div className="activity-head-left">
+              <span className="activity-head-icon"><Icon name="tasks" size={18} /></span>
+              <div>
+                <h2>Upcoming Tasks</h2>
+                <p>Recent study activity & deadlines</p>
+              </div>
+            </div>
+            <button type="button" className="activity-view-all" onClick={openTasks}>
+              View All <Icon name="chevronRight" size={14} />
+            </button>
           </div>
-          <button onClick={openTasks}>See tasks</button>
-        </div>
 
-        {upcomingTasks.length ? (
-          <div className="home-tasks-list">
-            {upcomingTasks.map((task) => (
-              <article className={`task-card ${task.done ? "is-done" : ""}`} key={task.id}>
-                <button
-                  className="task-check"
-                  aria-label={task.done ? `Mark ${task.title} as not done` : `Mark ${task.title} as done`}
-                  onClick={() => setTasks((current) => current.map((item) => item.id === task.id ? { ...item, done: !item.done } : item))}
-                >
-                  <Icon name={task.done ? "check" : "clock"} size={18} />
-                </button>
-                <div>
-                  <h3>{task.title}</h3>
-                  <p>{subjectName(task.subjectId)} • Due {formatDate(task.dueDate)}</p>
-                </div>
-                <button
-                  className="task-delete"
-                  aria-label={`Delete ${task.title}`}
-                  onClick={() => setTasks((current) => current.filter((item) => item.id !== task.id))}
-                >
-                  <Icon name="trash" size={17} />
-                </button>
-              </article>
-            ))}
+          <div className="activity-stats-strip">
+            <div>
+              <strong>{tasks.length}</strong>
+              <span>Total</span>
+            </div>
+            <div>
+              <strong>{pendingTasks.length}</strong>
+              <span>Pending</span>
+            </div>
+            <div>
+              <strong>{completionPct}%</strong>
+              <span>Progress</span>
+            </div>
           </div>
-        ) : (
-          <div className="empty-list">
-            <p>{tasks.length > 0 ? "All tasks completed! Great job staying on track." : "No upcoming tasks yet. Add one to keep track of due dates."}</p>
-          </div>
-        )}
 
-        <button className="quick-add" onClick={() => setTaskSheet(true)}><Icon name="plus" /> Add a task</button>
+          <div className="activity-filter-tabs" role="tablist">
+            <button type="button" className={taskFilter === "all" ? "active" : ""} onClick={() => setTaskFilter("all")}>
+              All ({tasks.length})
+            </button>
+            <button type="button" className={taskFilter === "pending" ? "active" : ""} onClick={() => setTaskFilter("pending")}>
+              Pending ({pendingTasks.length})
+            </button>
+            <button type="button" className={taskFilter === "done" ? "active" : ""} onClick={() => setTaskFilter("done")}>
+              Done ({completedTasks.length})
+            </button>
+          </div>
+
+          {filteredTasks.length ? (
+            <div className="home-tasks-list">
+              {filteredTasks.slice(0, 5).map((task) => (
+                <article className={`task-card ${task.done ? "is-done" : ""}`} key={task.id}>
+                  <button
+                    className="task-check"
+                    aria-label={task.done ? `Mark ${task.title} as not done` : `Mark ${task.title} as done`}
+                    onClick={() => setTasks((current) => current.map((item) => item.id === task.id ? { ...item, done: !item.done } : item))}
+                  >
+                    <Icon name={task.done ? "check" : "clock"} size={17} />
+                  </button>
+                  <div>
+                    <h3>{task.title}</h3>
+                    <p>
+                      {subjectName(task.subjectId)} •{" "}
+                      {task.done
+                        ? "Completed"
+                        : `Due ${formatDate(task.dueDate)}${task.dueTime ? ` at ${formatTime(task.dueTime)}` : ""}`}
+                    </p>
+                  </div>
+                  <button
+                    className="task-delete"
+                    aria-label={`Delete ${task.title}`}
+                    onClick={() => setTasks((current) => current.filter((item) => item.id !== task.id))}
+                  >
+                    <Icon name="trash" size={16} />
+                  </button>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="activity-empty">
+              <p>{tasks.length > 0 ? "No tasks match this filter." : "No tasks yet. Add your first deadline to stay on track."}</p>
+            </div>
+          )}
+
+          <button className="quick-add" onClick={() => setTaskSheet(true)}>
+            <Icon name="plus" size={18} /> Add a task
+          </button>
+        </section>
       </main>
 
       {taskSheet && (
@@ -1224,12 +1406,33 @@ function ScheduleTab({
   onDeleteClass?: (id: string) => void;
 }) {
   const weekdays = ["Mo", "Tu", "We", "Th", "Fr"];
+  const allDayCodes = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
   const dayNames: Record<string, string> = { Mo: "Monday", Tu: "Tuesday", We: "Wednesday", Th: "Thursday", Fr: "Friday" };
-  const dayOfWeek = new Date().getDay();
+  const today = new Date();
+  const dayOfWeek = today.getDay();
   const todayCode = (dayOfWeek >= 1 && dayOfWeek <= 5) ? weekdays[dayOfWeek - 1] : "Mo";
   const [day, setDay] = useState(todayCode);
   const [view, setView] = useState<"day" | "week">("day");
   const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null);
+  const [calMonth, setCalMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState<Date>(() => today);
+
+  const monthLabel = calMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const daysInMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 0).getDate();
+  const firstWeekday = calMonth.getDay();
+  const calendarCells = useMemo(() => {
+    const cells: (Date | null)[] = Array.from({ length: firstWeekday }, () => null);
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push(new Date(calMonth.getFullYear(), calMonth.getMonth(), d));
+    }
+    return cells;
+  }, [calMonth, daysInMonth, firstWeekday]);
+
+  const handleSelectDate = (dateObj: Date) => {
+    setSelectedDate(dateObj);
+    const code = allDayCodes[dateObj.getDay()];
+    if (weekdays.includes(code)) setDay(code);
+  };
 
   const dayClasses = classes.filter((item) => item.days.includes(day)).sort((a, b) => a.start.localeCompare(b.start));
 
@@ -1245,41 +1448,83 @@ function ScheduleTab({
     return count;
   }, [dayClasses]);
 
+  const selectedDateLabel = selectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const isSelectedToday =
+    selectedDate.getFullYear() === today.getFullYear() &&
+    selectedDate.getMonth() === today.getMonth() &&
+    selectedDate.getDate() === today.getDate();
+
   return (
     <>
-      <header className="simple-header"><div><p>{term.semester} • {term.academicYear}</p><h1>My schedule</h1></div></header>
+      <header className="simple-header">
+        <div>
+          <p>{term.semester} • {term.academicYear}</p>
+          <h1>Schedule</h1>
+        </div>
+      </header>
       <main className="app-content schedule-content">
-        <div className="view-switch"><button className={view === "day" ? "active" : ""} onClick={() => setView("day")}>Day</button><button className={view === "week" ? "active" : ""} onClick={() => setView("week")}>Week</button></div>
+        <div className="view-switch">
+          <button className={view === "day" ? "active" : ""} onClick={() => setView("day")}>Day</button>
+          <button className={view === "week" ? "active" : ""} onClick={() => setView("week")}>Week</button>
+        </div>
         {view === "day" ? <>
-          <label className="field-label" htmlFor="schedule-day">Choose a day (Dropdown)</label>
-          <div className={`select-wrapper ${dayConflictsCount > 0 ? "select-has-conflict" : ""}`}>
-            <select
-              id="schedule-day"
-              className={`field-select schedule-day-select ${dayConflictsCount > 0 ? "has-conflict" : ""}`}
-              value={day}
-              onChange={(event) => setDay(event.target.value)}
-            >
-              {weekdays.map((item) => {
-                const itemsOnDay = classes.filter((c) => c.days.includes(item));
-                let hasConflictOnThisDay = false;
-                for (let i = 0; i < itemsOnDay.length; i++) {
-                  for (let j = i + 1; j < itemsOnDay.length; j++) {
-                    if (checkTimeOverlap(itemsOnDay[i].start, itemsOnDay[i].end, itemsOnDay[j].start, itemsOnDay[j].end)) {
-                      hasConflictOnThisDay = true;
-                      break;
-                    }
-                  }
-                  if (hasConflictOnThisDay) break;
-                }
+          {/* Monthly Calendar Card */}
+          <section className="calendar-card" aria-label="Monthly calendar">
+            <div className="calendar-head">
+              <button
+                type="button"
+                className="calendar-nav-btn"
+                onClick={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1))}
+                aria-label="Previous month"
+              >
+                <Icon name="arrow" size={16} />
+              </button>
+              <strong>{monthLabel}</strong>
+              <button
+                type="button"
+                className="calendar-nav-btn"
+                onClick={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}
+                aria-label="Next month"
+              >
+                <Icon name="chevronRight" size={16} />
+              </button>
+            </div>
+            <div className="calendar-weekdays">
+              {["S", "M", "T", "W", "T", "F", "S"].map((lbl, idx) => (
+                <span key={idx}>{lbl}</span>
+              ))}
+            </div>
+            <div className="calendar-grid">
+              {calendarCells.map((cell, idx) => {
+                if (!cell) return <span key={`empty-${idx}`} />;
+                const code = allDayCodes[cell.getDay()];
+                const dayEntries = weekdays.includes(code) ? classes.filter((c) => c.days.includes(code)) : [];
+                const isSelected =
+                  cell.getFullYear() === selectedDate.getFullYear() &&
+                  cell.getMonth() === selectedDate.getMonth() &&
+                  cell.getDate() === selectedDate.getDate();
+                const isWeekend = cell.getDay() === 0 || cell.getDay() === 6;
+
                 return (
-                  <option value={item} key={item}>
-                    {dayNames[item]} ({itemsOnDay.length} {itemsOnDay.length === 1 ? "class" : "classes"}
-                    {hasConflictOnThisDay ? " • ⚠️ CONFLICT" : ""})
-                  </option>
+                  <button
+                    key={cell.getDate()}
+                    type="button"
+                    className={`calendar-day-btn ${isSelected ? "is-selected" : ""} ${isWeekend ? "is-muted" : ""}`}
+                    onClick={() => handleSelectDate(cell)}
+                  >
+                    <span>{cell.getDate()}</span>
+                    {dayEntries.length > 0 && (
+                      <div className="calendar-dots">
+                        {dayEntries.slice(0, 3).map((cls) => (
+                          <i key={cls.id} style={{ background: cls.color || "var(--brand)" }} />
+                        ))}
+                      </div>
+                    )}
+                  </button>
                 );
               })}
-            </select>
-          </div>
+            </div>
+          </section>
 
           {/* Interactive Day Chip Bar */}
           <div className="schedule-day-chips">
@@ -1312,12 +1557,14 @@ function ScheduleTab({
             </div>
           )}
 
-          <div className="schedule-date">
+          <div className="schedule-section-bar">
             <div>
-              <h2>{dayNames[day]}</h2>
-              <p>{dayClasses.length} {role === "student" ? "classes" : "sections"}</p>
+              <h2>{isSelectedToday ? `Today • ${selectedDateLabel}` : `${dayNames[day]} • ${selectedDateLabel}`}</h2>
+              <p>{dayClasses.length} {dayClasses.length === 1 ? "class" : "classes"} scheduled</p>
             </div>
-            <span>{formatDate(term.startDate)} – {formatDate(term.endDate)}</span>
+            <button type="button" className="add-pill-btn" onClick={openSheet}>
+              <Icon name="plus" size={16} /> Add Class
+            </button>
           </div>
 
           {dayClasses.length ? (
@@ -1391,7 +1638,8 @@ function NewTaskSheet({ classes, close, save }: { classes: ClassItem[]; close: (
   const [title, setTitle] = useState("");
   const [subjectId, setSubjectId] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const valid = title.trim().length > 0 && Boolean(dueDate);
+  const [dueTime, setDueTime] = useState("17:00");
+  const valid = title.trim().length > 0 && Boolean(dueDate) && Boolean(dueTime);
   return (
     <div className="sheet-overlay" onMouseDown={(event) => event.target === event.currentTarget && close()}>
       <div className="bottom-sheet task-sheet">
@@ -1424,11 +1672,17 @@ function NewTaskSheet({ classes, close, save }: { classes: ClassItem[]; close: (
               </select>
             </div>
           </div>
-          <div className="input-row">
-            <label htmlFor="task-due">Due date *</label>
-            <input id="task-due" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+          <div className="date-grid">
+            <div className="input-row">
+              <label htmlFor="task-due">Target Date *</label>
+              <input id="task-due" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+            </div>
+            <div className="input-row">
+              <label htmlFor="task-due-time">Target Time *</label>
+              <input id="task-due-time" type="time" value={dueTime} onChange={(event) => setDueTime(event.target.value)} />
+            </div>
           </div>
-          <PrimaryButton disabled={!valid} onClick={() => save({ id: `${Date.now()}`, title: title.trim(), subjectId, dueDate, done: false })}>Save task</PrimaryButton>
+          <PrimaryButton disabled={!valid} onClick={() => save({ id: `${Date.now()}`, title: title.trim(), subjectId, dueDate, dueTime, done: false })}>Save task</PrimaryButton>
         </div>
       </div>
     </div>
@@ -1451,9 +1705,9 @@ function TasksTab({ role, classes, tasks, setTasks, openClassSheet }: { role: Ro
       <main className="app-content">
         <div className="stat-grid"><article><strong>{role === "student" ? openCount : classes.length}</strong><span>{role === "student" ? "To do" : "Sections"}</span></article><article><strong>{role === "student" ? dueThisWeek : 0}</strong><span>{role === "student" ? "Due this week" : "Announcements"}</span></article><article><strong>{role === "student" ? tasks.filter((task) => task.done).length : "—"}</strong><span>{role === "student" ? "Completed" : "Attendance"}</span></article></div>
         <div className="section-title"><div><h2>{role === "student" ? "Coming up" : "Active sections"}</h2><p>{role === "student" ? "Sorted by deadline" : "Manage attendance and announcements"}</p></div></div>
-        {role === "student" ? tasks.length ? [...tasks].sort((a, b) => a.dueDate.localeCompare(b.dueDate)).map((task) => <article className={`task-card ${task.done ? "is-done" : ""}`} key={task.id}>
+        {role === "student" ? tasks.length ? [...tasks].sort((a, b) => `${a.dueDate}T${a.dueTime || "23:59"}`.localeCompare(`${b.dueDate}T${b.dueTime || "23:59"}`)).map((task) => <article className={`task-card ${task.done ? "is-done" : ""}`} key={task.id}>
           <button className="task-check" aria-label={task.done ? `Mark ${task.title} as not done` : `Mark ${task.title} as done`} onClick={() => setTasks((current) => current.map((item) => item.id === task.id ? { ...item, done: !item.done } : item))}><Icon name={task.done ? "check" : "clock"} size={18} /></button>
-          <div><h3>{task.title}</h3><p>{subjectName(task.subjectId)} • Due {formatDate(task.dueDate)}</p></div>
+          <div><h3>{task.title}</h3><p>{subjectName(task.subjectId)} • Due {formatDate(task.dueDate)}{task.dueTime ? ` at ${formatTime(task.dueTime)}` : ""}</p></div>
           <button className="task-delete" aria-label={`Delete ${task.title}`} onClick={() => setTasks((current) => current.filter((item) => item.id !== task.id))}><Icon name="trash" size={17} /></button>
         </article>) : <div className="empty-list"><p>No tasks yet. Add one to keep track of due dates.</p><button className="outline-button" onClick={() => setTaskSheet(true)}><Icon name="plus" /> Add a task</button></div> : classes.length ? classes.map((item) =>
           <article className="task-card" key={item.id}><span className="task-check"><Icon name="users" size={18} /></span><div><h3>{item.name}{item.section ? ` • ${item.section}` : ""}</h3><p>{item.room || "Room not set"} • {item.days.join(", ")}</p></div></article>
@@ -1528,13 +1782,7 @@ function ProfileTab({
   setUserName,
   term,
   setTerm,
-  dark,
-  toggleDark,
-  openSettings,
-  openNotifications,
-  openAbout,
   switchRole,
-  restart,
   avatar,
   openAvatarModal,
 }: {
@@ -1543,13 +1791,7 @@ function ProfileTab({
   setUserName: (name: string) => void;
   term: AcademicTerm;
   setTerm: (term: AcademicTerm) => void;
-  dark: boolean;
-  toggleDark: () => void;
-  openSettings: () => void;
-  openNotifications: () => void;
-  openAbout?: () => void;
   switchRole: () => void;
-  restart: () => void;
   avatar?: string;
   openAvatarModal?: () => void;
 }) {
@@ -1564,9 +1806,6 @@ function ProfileTab({
           <p>YOUR ACCOUNT</p>
           <h1>Profile</h1>
         </div>
-        <button className="icon-button" onClick={openSettings} aria-label="Open Settings">
-          <Icon name="settings" />
-        </button>
       </header>
       <main className="app-content profile-content">
         <div className="profile-card">
@@ -1679,87 +1918,6 @@ function ProfileTab({
             </div>
           </button>
         </div>
-
-        <h3 className="settings-label">PREFERENCES</h3>
-        <div className="settings-card">
-          <button
-            type="button"
-            className="setting-item"
-            onClick={openAvatarModal}
-          >
-            <div className="setting-item-left">
-              <div className="setting-icon-box icon-box-purple">
-                <Icon name="sparkles" size={18} />
-              </div>
-              <div className="setting-text-wrap">
-                <span className="setting-title">Change Avatar</span>
-              </div>
-            </div>
-            <div className="setting-item-right">
-              <span className="setting-value">Edit</span>
-              <Icon name="chevronRight" size={16} />
-            </div>
-          </button>
-
-          <button
-            type="button"
-            className="setting-item"
-            onClick={openNotifications}
-          >
-            <div className="setting-item-left">
-              <div className="setting-icon-box icon-box-rose">
-                <Icon name="bell" size={18} />
-              </div>
-              <div className="setting-text-wrap">
-                <span className="setting-title">Notifications</span>
-              </div>
-            </div>
-            <div className="setting-item-right">
-              <span className="setting-value">Open</span>
-              <Icon name="chevronRight" size={16} />
-            </div>
-          </button>
-
-          {openAbout && (
-            <button
-              type="button"
-              className="setting-item"
-              onClick={openAbout}
-            >
-              <div className="setting-item-left">
-                <div className="setting-icon-box icon-box-cyan">
-                  <Icon name="info" size={18} />
-                </div>
-                <div className="setting-text-wrap">
-                  <span className="setting-title">About & Terms</span>
-                </div>
-              </div>
-              <div className="setting-item-right">
-                <span className="setting-value">View</span>
-                <Icon name="chevronRight" size={16} />
-              </div>
-            </button>
-          )}
-
-          <div className="setting-item setting-toggle-item">
-            <div className="setting-item-left">
-              <div className="setting-icon-box icon-box-slate">
-                <Icon name="moon" size={18} />
-              </div>
-              <div className="setting-text-wrap">
-                <span className="setting-title">Dark mode</span>
-              </div>
-            </div>
-            <div className="setting-item-right">
-              <Toggle checked={dark} onChange={toggleDark} />
-            </div>
-          </div>
-        </div>
-
-        <button className="logout-btn" onClick={restart}>
-          <Icon name="trash" size={16} />
-          <span>Log out</span>
-        </button>
       </main>
       {editingTerm && <TermEditSheet current={term} save={(nextTerm) => { setTerm(nextTerm); setEditingTerm(false); }} close={() => setEditingTerm(false)} />}
       {editingName && (
@@ -2215,7 +2373,28 @@ function PermissionPrompt({ allow, decline }: { allow: () => void; decline: () =
 }
 
 function PalettePreview() {
-  return <div className="palette-preview"><div><span className="preview-chip">Tu</span><article><i /><div><strong>Programming 1</strong><small>8:00 – 9:30 AM</small></div></article></div><span className="palette-preview-button">Sample button</span><nav><Icon name="home" size={17} /><Icon name="calendar" size={17} /><Icon name="user" size={17} /></nav></div>;
+  return (
+    <div className="palette-preview">
+      <div className="palette-preview-top">
+        <span className="preview-chip">Tu</span>
+        <article>
+          <i />
+          <div>
+            <strong>Programming 1</strong>
+            <small>8:00 – 9:30 AM</small>
+          </div>
+        </article>
+      </div>
+      <div className="palette-preview-bottom">
+        <nav>
+          <span className="preview-nav-active"><Icon name="home" size={15} /></span>
+          <span><Icon name="calendar" size={15} /></span>
+          <span><Icon name="user" size={15} /></span>
+        </nav>
+        <span className="palette-preview-button">Sample button</span>
+      </div>
+    </div>
+  );
 }
 
 function SettingsPage({
@@ -2229,6 +2408,7 @@ function SettingsPage({
   openRingtones,
   openAbout,
   openTerms,
+  openTeam,
   simulate,
   switchRole,
   clearSchedules,
@@ -2244,6 +2424,7 @@ function SettingsPage({
   openRingtones: () => void;
   openAbout?: () => void;
   openTerms?: () => void;
+  openTeam?: () => void;
   simulate: () => void;
   switchRole: () => void;
   clearSchedules: () => void;
@@ -2251,14 +2432,14 @@ function SettingsPage({
 }) {
   const [permission, setPermission] = useState(false);
   const [editingTerm, setEditingTerm] = useState(false);
-  const [confirmClear, setConfirmClear] = useState(false);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
   const palettes = [
-    ["Mint Green", "#4ADE9A"],
-    ["Ocean Blue", "#0066FF"],
-    ["Violet", "#8B5CF6"],
-    ["Sunset Orange", "#FF8A00"],
-    ["Rose Pink", "#EC4899"],
-    ["Maroon", "#8B1E3F"],
+    ["Sapphire Blue", "#3B5BDB"],
+    ["Mint Green", "#12B886"],
+    ["Violet", "#7048E8"],
+    ["Sunset Orange", "#F76707"],
+    ["Rose Pink", "#E64980"],
+    ["Ocean Cyan", "#0CA678"],
   ];
   const notificationsDisabled = !settings.notificationsEnabled;
   const enableNotifications = () => {
@@ -2277,7 +2458,7 @@ function SettingsPage({
       <SubpageHeader title="Settings" back={back} />
       <main className="settings-content">
         <section className="settings-section">
-          <div className="settings-section-title"><span>Appearance</span><button onClick={() => update({ themeMode: "light", accent: "#4ADE9A", accentName: "Mint Green" })}>Reset to default</button></div>
+          <div className="settings-section-title"><span>Appearance</span><button onClick={() => update({ themeMode: "light", accent: "#3B5BDB", accentName: "Sapphire Blue" })}>Reset to default</button></div>
           <div className="settings-panel appearance-panel">
             <PalettePreview />
             <label className="control-label">Theme mode</label>
@@ -2328,24 +2509,34 @@ function SettingsPage({
         </section>
 
         <section className="settings-section">
-          <div className="settings-section-title"><span>About & Legal</span></div>
+          <div className="settings-section-title"><span>About TaSched</span></div>
           <div className="settings-panel">
             {openAbout && (
               <button className="setting-row button-row" onClick={openAbout}>
-                <span className="setting-icon"><Icon name="info" /></span>
+                <span className="setting-icon"><Icon name="help" /></span>
                 <div>
-                  <strong>About TaSched</strong>
-                  <small>Version 1.0.0 • Academic companion & mascot</small>
+                  <strong>Help & Information</strong>
+                  <small>Version 1.0.0 • Academic companion & Owl mascot</small>
                 </div>
                 <b>›</b>
               </button>
             )}
             {openTerms && (
               <button className="setting-row button-row" onClick={openTerms}>
-                <span className="setting-icon"><Icon name="sparkles" /></span>
+                <span className="setting-icon"><Icon name="shield" /></span>
                 <div>
-                  <strong>Terms & Conditions</strong>
-                  <small>Academic guidelines, privacy & policies</small>
+                  <strong>Privacy Policy</strong>
+                  <small>Local-first storage, privacy & terms of use</small>
+                </div>
+                <b>›</b>
+              </button>
+            )}
+            {openTeam && (
+              <button className="setting-row button-row" onClick={openTeam}>
+                <span className="setting-icon"><Icon name="users" /></span>
+                <div>
+                  <strong>Development Team</strong>
+                  <small>Core developers behind TaSched</small>
                 </div>
                 <b>›</b>
               </button>
@@ -2354,19 +2545,28 @@ function SettingsPage({
         </section>
 
         <section className="settings-section">
-          <div className="settings-section-title"><span>Account</span></div>
+          <div className="settings-section-title"><span>Data Management</span></div>
           <div className="settings-panel">
             <button className="setting-row button-row" onClick={() => setEditingTerm(true)}><span className="setting-icon"><Icon name="calendar" /></span><div><strong>Academic term</strong><small>{term.semester} • {term.academicYear}</small></div><b>›</b></button>
             <button className="setting-row button-row" onClick={switchRole}><span className="setting-icon"><Icon name="users" /></span><div><strong>Switch role</strong><small>{role === "student" ? "Student" : "Instructor"}</small></div><b>›</b></button>
-            <button className="setting-row button-row danger-row" onClick={() => setConfirmClear(true)}><span className="setting-icon"><Icon name="trash" /></span><div><strong>Clear all schedules</strong><small>Remove every saved class</small></div><b>›</b></button>
-            <button className="setting-row button-row danger-row" onClick={logout}><span className="setting-icon"><Icon name="arrow" /></span><div><strong>Log out</strong></div><b>›</b></button>
+            <button className="setting-row button-row danger-row" onClick={() => setConfirmClearAll(true)}><span className="setting-icon"><Icon name="trash" /></span><div><strong>Clear all data</strong><small>Erase saved classes, tasks & settings</small></div><b>›</b></button>
           </div>
         </section>
         <p className="developer-note">Production note: use Firebase Cloud Messaging, offline local scheduled notifications, and Android notification channels for device delivery and custom ringtones.</p>
       </main>
       {permission && <PermissionPrompt allow={() => { update({ notificationsEnabled: true, permissionAsked: true }); setPermission(false); }} decline={() => { update({ notificationsEnabled: false, permissionAsked: true }); setPermission(false); }} />}
       {editingTerm && <TermEditSheet current={term} save={(nextTerm) => { setTerm(nextTerm); setEditingTerm(false); }} close={() => setEditingTerm(false)} />}
-      {confirmClear && <div className="permission-overlay"><div className="permission-card compact-confirm"><span><Icon name="trash" /></span><h2>Clear all schedules?</h2><p>This removes every saved class from this session.</p><button className="danger-button" onClick={() => { clearSchedules(); setConfirmClear(false); }}>Clear schedules</button><button className="text-button permission-later" onClick={() => setConfirmClear(false)}>Cancel</button></div></div>}
+      {confirmClearAll && (
+        <div className="permission-overlay">
+          <div className="permission-card compact-confirm">
+            <span><Icon name="trash" /></span>
+            <h2>Clear all data?</h2>
+            <p>This permanently removes all your saved classes, tasks, profile details, and settings from this device.</p>
+            <button className="danger-button" onClick={() => { clearSchedules(); logout(); setConfirmClearAll(false); }}>Clear all data</button>
+            <button className="text-button permission-later" onClick={() => setConfirmClearAll(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2424,11 +2624,11 @@ function AboutPage({ back, openTerms }: { back: () => void; openTerms: () => voi
                 <small>Get notified before your classes start, plus task due-date alerts and quiet hours.</small>
               </div>
             </div>
-            <div className="about-feature-item">
+              <div className="about-feature-item">
               <span className="about-feature-icon"><Icon name="sparkles" size={19} /></span>
               <div>
                 <strong>Official Mascot Companion</strong>
-                <small>Interactive orange buddy that greets, guides, and celebrates your academic progress.</small>
+                <small>Interactive Owl buddy that greets, guides, and celebrates your academic progress.</small>
               </div>
             </div>
             <div className="about-feature-item">
@@ -2464,14 +2664,50 @@ function AboutPage({ back, openTerms }: { back: () => void; openTerms: () => voi
   );
 }
 
+function DevelopmentTeamPage({ back }: { back: () => void }) {
+  const developers = [
+    { name: "Josh Lee Villavicencio", role: "Developer" },
+    { name: "Ashley Nicole Roldan", role: "Developer" },
+    { name: "Tristan Briones", role: "Developer" },
+    { name: "Prince August Recalde", role: "Developer" },
+  ];
+
+  return (
+    <div className="settings-page dev-team-page">
+      <SubpageHeader title="Development Team" back={back} />
+      <main className="settings-content dev-team-content">
+        <div className="dev-team-intro">
+          <h2>TaSched v1.0.0</h2>
+          <p>Smart offline-first academic schedule & task companion.</p>
+        </div>
+
+        <h3 className="dev-section-heading">Core Developers</h3>
+        <div className="dev-team-list">
+          {developers.map((dev) => (
+            <article className="dev-card" key={dev.name}>
+              <span className="dev-avatar-tile" aria-hidden="true">
+                <Icon name="user" size={19} />
+              </span>
+              <div>
+                <strong>{dev.name}</strong>
+                <small>{dev.role}</small>
+              </div>
+            </article>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
 function TermsPage({ back }: { back: () => void }) {
   return (
     <div className="settings-page terms-page">
-      <SubpageHeader title="Terms & Conditions" back={back} />
+      <SubpageHeader title="Privacy Policy" back={back} />
       <main className="settings-content terms-content">
         <div className="terms-header-card">
-          <span className="terms-badge">LEGAL AGREEMENT & GUIDELINES</span>
-          <h2>Terms of Use</h2>
+          <span className="terms-badge">PRIVACY POLICY & TERMS</span>
+          <h2>Privacy & Terms of Use</h2>
           <p>Last updated: November 2026</p>
           <small>
             Please read these Terms and Conditions carefully before using TaSched.
@@ -2531,7 +2767,7 @@ function TermsPage({ back }: { back: () => void }) {
             <h3>Intellectual Property & Mascot Rights</h3>
           </div>
           <p>
-            The TaSched application design, typography, logos, brand elements, and the <strong>Official Orange Mascot</strong> illustrations and animations are protected by intellectual property rights. You may not copy, reverse engineer, or redistribute these proprietary assets for commercial purposes without explicit permission.
+            The TaSched application design, typography, logos, brand elements, and the <strong>Official Owl Mascot</strong> illustrations and animations are protected by intellectual property rights. You may not copy, reverse engineer, or redistribute these proprietary assets for commercial purposes without explicit permission.
           </p>
         </section>
 
@@ -2709,7 +2945,12 @@ function AppShell({
   const [sheet, setSheet] = useState(false);
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
-  const [page, setPage] = useState<"settings" | "ringtones" | "notifications" | "about" | "terms" | null>(null);
+  const [page, setPage] = useState<"settings" | "ringtones" | "notifications" | "about" | "terms" | "team" | null>(null);
+  const [returnPage, setReturnPage] = useState<"settings" | null>(null);
+  const openInfoPage = (target: "about" | "terms" | "team", from: "settings" | null) => {
+    setReturnPage(from);
+    setPage(target);
+  };
   const [activeReminder, setActiveReminder] = useState<Reminder | null>(null);
   const updateSettings = (changes: Partial<SettingsState>) => setSettings?.((current) => ({ ...defaultSettings, ...(current && typeof current === "object" ? current : {}), ...changes }));
   const fireReminder = (reminder?: Reminder, tone = settings.ringtone) => {
@@ -2744,7 +2985,7 @@ function AppShell({
     const taskItems: Reminder[] = role === "student" && settings.taskReminders ? tasks.filter((task) => !task.done).map((task) => ({
     id: `upcoming-${task.id}`,
     title: `${task.title} due soon`,
-    message: `${formatDate(task.dueDate)} • ${classes.find((item) => item.id === task.subjectId)?.name || "Course task"}`,
+    message: `${formatDate(task.dueDate)}${task.dueTime ? ` at ${formatTime(task.dueTime)}` : ""} • ${classes.find((item) => item.id === task.subjectId)?.name || "Course task"}`,
     time: `${settings.taskOffset.startsWith("Custom:") ? settings.taskOffset.split(":").slice(1).join(" ") : settings.taskOffset} before`,
     unread: false,
     upcoming: true,
@@ -2787,13 +3028,13 @@ function AppShell({
     if (role !== "student" || !settings.notificationsEnabled || !settings.taskReminders) return;
     const now = new Date();
     const timers = tasks.filter((task) => !task.done && task.dueDate).map((task) => {
-      const due = new Date(`${task.dueDate}T09:00:00`);
+      const due = new Date(`${task.dueDate}T${task.dueTime || "09:00"}:00`);
       const delay = due.getTime() - offsetMinutes(settings.taskOffset) * 60000 - now.getTime();
       if (delay <= 0 || delay > 86400000) return null;
       return window.setTimeout(() => fireReminder({
         id: `scheduled-task-${task.id}-${task.dueDate}`,
         title: `${task.title} is due soon`,
-        message: `${formatDate(task.dueDate)} • ${classes.find((item) => item.id === task.subjectId)?.name || "Course task"}`,
+        message: `${formatDate(task.dueDate)}${task.dueTime ? ` at ${formatTime(task.dueTime)}` : ""} • ${classes.find((item) => item.id === task.subjectId)?.name || "Course task"}`,
         time: "Just now",
         unread: true,
       }, settings.taskTone), delay);
@@ -2801,11 +3042,12 @@ function AppShell({
     return () => timers.forEach(window.clearTimeout);
   }, [tasks, classes, role, settings.notificationsEnabled, settings.taskReminders, settings.taskOffset, settings.taskTone, settings.ringtone, settings.volume, settings.quietHours, settings.quietStart, settings.quietEnd, settings.deviceDefault, settings.vibration]);
 
-  if (page === "settings") return <div className={`screen app-shell ${effectiveDark ? "dark-mode" : ""}`}><SettingsPage role={role} term={term} setTerm={setTerm} classes={classes} settings={settings} update={updateSettings} back={() => setPage(null)} openRingtones={() => setPage("ringtones")} openAbout={() => setPage("about")} openTerms={() => setPage("terms")} simulate={() => fireReminder()} switchRole={switchRole} clearSchedules={clearSchedules} logout={restart} />{activeReminder && <NotificationBanner reminder={activeReminder} view={() => setPage("notifications")} snooze={() => { const snoozed = { ...activeReminder, id: `${Date.now()}`, time: "Snoozed for 5 min", unread: true, upcoming: true }; setReminders?.((current) => [snoozed, ...(Array.isArray(current) ? current : [])]); setActiveReminder(null); window.setTimeout(() => fireReminder({ ...snoozed, time: "Just now", upcoming: false }), 300000); }} dismiss={() => setActiveReminder(null)} />}</div>;
+  if (page === "settings") return <div className={`screen app-shell ${effectiveDark ? "dark-mode" : ""}`}><SettingsPage role={role} term={term} setTerm={setTerm} classes={classes} settings={settings} update={updateSettings} back={() => setPage(null)} openRingtones={() => setPage("ringtones")} openAbout={() => openInfoPage("about", "settings")} openTerms={() => openInfoPage("terms", "settings")} openTeam={() => openInfoPage("team", "settings")} simulate={() => fireReminder()} switchRole={switchRole} clearSchedules={clearSchedules} logout={() => { try { Object.keys(window.localStorage).filter((k) => k.startsWith("tasched.")).forEach((k) => window.localStorage.removeItem(k)); } catch {} setSettings?.(defaultSettings); setReminders?.([]); setAvatar("mascot-orange"); restart(); }} />{activeReminder && <NotificationBanner reminder={activeReminder} view={() => setPage("notifications")} snooze={() => { const snoozed = { ...activeReminder, id: `${Date.now()}`, time: "Snoozed for 5 min", unread: true, upcoming: true }; setReminders?.((current) => [snoozed, ...(Array.isArray(current) ? current : [])]); setActiveReminder(null); window.setTimeout(() => fireReminder({ ...snoozed, time: "Just now", upcoming: false }), 300000); }} dismiss={() => setActiveReminder(null)} />}</div>;
   if (page === "ringtones") return <div className={`screen app-shell ${effectiveDark ? "dark-mode" : ""}`}><RingtonePage settings={settings} update={updateSettings} back={() => setPage("settings")} /></div>;
   if (page === "notifications") return <div className={`screen app-shell ${effectiveDark ? "dark-mode" : ""}`}><NotificationCenter reminders={[...reminders, ...upcoming.filter((item) => !reminders.some((saved) => saved.id === item.id))]} back={() => setPage(null)} markAll={() => setReminders?.((current) => (Array.isArray(current) ? current : []).map((item) => ({ ...item, unread: false })))} /></div>;
-  if (page === "about") return <div className={`screen app-shell ${effectiveDark ? "dark-mode" : ""}`}><AboutPage back={() => setPage("settings")} openTerms={() => setPage("terms")} /></div>;
-  if (page === "terms") return <div className={`screen app-shell ${effectiveDark ? "dark-mode" : ""}`}><TermsPage back={() => setPage("settings")} /></div>;
+  if (page === "about") return <div className={`screen app-shell ${effectiveDark ? "dark-mode" : ""}`}><AboutPage back={() => setPage(returnPage)} openTerms={() => openInfoPage("terms", returnPage)} /></div>;
+  if (page === "terms") return <div className={`screen app-shell ${effectiveDark ? "dark-mode" : ""}`}><TermsPage back={() => setPage(returnPage)} /></div>;
+  if (page === "team") return <div className={`screen app-shell ${effectiveDark ? "dark-mode" : ""}`}><DevelopmentTeamPage back={() => setPage(returnPage)} /></div>;
   return (
     <div className={`screen app-shell ${effectiveDark ? "dark-mode" : ""}`}>
       {tab === "home" && (
@@ -2821,6 +3063,7 @@ function AppShell({
             setSheet(true);
           }}
           openNotifications={() => setPage("notifications")}
+          openSettings={() => setPage("settings")}
           openSchedule={() => setTab("schedule")}
           openTasks={() => setTab("tasks")}
           onEditClass={(item) => {
@@ -2869,13 +3112,7 @@ function AppShell({
           setUserName={setUserName}
           term={term}
           setTerm={setTerm}
-          dark={effectiveDark}
-          toggleDark={() => updateSettings({ themeMode: effectiveDark ? "light" : "dark" })}
-          openSettings={() => setPage("settings")}
-          openNotifications={() => setPage("notifications")}
-          openAbout={() => setPage("about")}
           switchRole={switchRole}
-          restart={restart}
           avatar={avatar}
           openAvatarModal={() => setAvatarModalOpen(true)}
         />
@@ -2976,8 +3213,11 @@ export default function App() {
   }, [role, userName, term, avatar, classes, tasks, storedSettings, storedReminders]);
   const themeStyle = {
     "--mint": settings.accent,
-    "--soft-mint": effectiveDark ? "rgba(16, 185, 129, 0.18)" : mixColor(settings.accent, "#FFFFFF", 0.8),
-    "--emerald": effectiveDark ? "#6ee7b7" : mixColor(settings.accent, "#000000", 0.48),
+    "--brand": settings.accent,
+    "--brand-soft": effectiveDark ? "rgba(59, 91, 219, 0.22)" : mixColor(settings.accent, "#FFFFFF", 0.85),
+    "--brand-glow": mixColor(settings.accent, "#FFFFFF", 0.35),
+    "--soft-mint": effectiveDark ? "rgba(16, 185, 129, 0.18)" : mixColor(settings.accent, "#FFFFFF", 0.82),
+    "--emerald": effectiveDark ? "#91a7ff" : mixColor(settings.accent, "#000000", 0.25),
     "--accent-text": readableText(settings.accent),
   } as React.CSSProperties;
   return (

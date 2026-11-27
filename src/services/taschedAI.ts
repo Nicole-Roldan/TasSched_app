@@ -53,6 +53,7 @@ export interface TaSchedContext {
     title: string;
     subjectId: string;
     dueDate: string;
+    dueTime?: string;
     done: boolean;
   }[];
 }
@@ -481,7 +482,7 @@ function buildSystemPrompt(context: TaSchedContext, replyLength: ReplyLength, ha
     ? pendingTasks
         .map((t) => {
           const subj = context.classes.find((c) => c.id === t.subjectId)?.name || "General";
-          return `- [Pending] ${t.title} | Subject: ${subj} | Due: ${t.dueDate || "None"}`;
+          return `- [Pending] ${t.title} | Subject: ${subj} | Due: ${t.dueDate || "None"}${t.dueTime ? ` at ${fmtTime(t.dueTime)}` : ""}`;
         })
         .join("\n")
     : "No pending tasks.";

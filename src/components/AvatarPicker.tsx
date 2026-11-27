@@ -14,10 +14,10 @@ export interface PresetAvatar {
 export const PRESET_AVATARS: PresetAvatar[] = [
   {
     id: "mascot-orange",
-    name: "TaSched Mascot",
+    name: "TaSched Owl",
     badge: "OFFICIAL",
-    bg: "linear-gradient(135deg, #FFF7ED, #FFEDD5)",
-    border: "#FB923C",
+    bg: "linear-gradient(135deg, #FDF8F0, #F5E8D6)",
+    border: "#8D6E63",
     type: "mascot",
   },
   {

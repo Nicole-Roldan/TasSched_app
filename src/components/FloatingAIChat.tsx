@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import Mascot from "./Mascot";
 import {
   AUTO_MODEL,
   GEMINI_MODELS,
@@ -203,13 +204,27 @@ export default function FloatingAIChat({
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [keyTestStatus, setKeyTestStatus] = useState<{ ok: boolean; msg: string } | null>(null);
   const [testingKey, setTestingKey] = useState(false);
+  const [showHint, setShowHint] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem("tasched.ai.hintDismissed") !== "1";
+    } catch {
+      return true;
+    }
+  });
+
+  const dismissHint = () => {
+    setShowHint(false);
+    try {
+      window.localStorage.setItem("tasched.ai.hintDismissed", "1");
+    } catch {}
+  };
 
   const abortRef = useRef<AbortController | null>(null);
   const feedRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   /* --- Full-Screen Draggable Positioning --- */
-  const FAB_SIZE = 58;
+  const FAB_SIZE = 66;
   const getWinDims = () => {
     const vw = typeof window !== "undefined" ? window.innerWidth : 400;
     const vh = typeof window !== "undefined" ? window.innerHeight : 700;
@@ -298,7 +313,11 @@ export default function FloatingAIChat({
   };
 
   const toggleOpen = () => {
-    if (dragRef.current.moved) return;
+    if (dragRef.current.moved) {
+      dismissHint();
+      return;
+    }
+    dismissHint();
     const nextOpen = !open;
     setPos((prev) => clampPos(prev.x, prev.y, nextOpen));
     setOpen(nextOpen);
@@ -516,21 +535,31 @@ export default function FloatingAIChat({
 
   if (!open) {
     return (
-      <button
-        type="button"
-        className={`floating-ai-fab ${darkMode ? "is-dark" : ""}`}
+      <div
+        className="floating-ai-anchor"
         style={{ left: `${pos.x}px`, top: `${pos.y}px` }}
-        onPointerDown={(e) => startDrag(e, false)}
-        onClick={toggleOpen}
-        aria-label="Open TaSched AI Assistant (drag to move)"
-        title="TaSched AI • Drag to move anywhere"
       >
-        <span className={`fai-status-dot status-${statusKind}`} />
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="m12 3 1.9 4.9L19 10l-4.1 2.1L13 17l-1.9-4.9L7 10l4.1-2.1L12 3Z" />
-          <path d="M5 19l1-2.5L8.5 15 6 14l-1-2.5L4 14l-2.5 1L4 16.5 5 19Z" />
-        </svg>
-      </button>
+        {showHint && (
+          <button
+            type="button"
+            className={`fai-drag-hint ${darkMode ? "is-dark" : ""}`}
+            onClick={dismissHint}
+          >
+            💬 Drag me anywhere!
+          </button>
+        )}
+        <button
+          type="button"
+          className={`floating-ai-fab ${darkMode ? "is-dark" : ""}`}
+          onPointerDown={(e) => startDrag(e, false)}
+          onClick={toggleOpen}
+          aria-label="Open TaSched AI Assistant (drag to move)"
+          title="TaSched AI • Drag to move anywhere"
+        >
+          <span className={`fai-status-dot status-${statusKind}`} />
+          <Mascot pose="peeking-top" size={50} interactive={false} animated={false} />
+        </button>
+      </div>
     );
   }
 
